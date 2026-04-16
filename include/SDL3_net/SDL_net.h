@@ -1097,6 +1097,38 @@ extern SDL_DECLSPEC int SDLCALL NET_ReadFromStreamSocket(NET_StreamSocket *sock,
 extern SDL_DECLSPEC void SDLCALL NET_SimulateStreamPacketLoss(NET_StreamSocket *sock, int percent_loss);
 
 /**
+ * Disable or enable Nagle's algorithm on a stream socket.
+ *
+ * By default, TCP uses Nagle's algorithm, which buffers small outgoing
+ * packets and coalesces them to reduce the number of network round trips.
+ * This improves throughput on slow networks but adds latency, because small
+ * writes are held briefly before transmission.
+ *
+ * Setting `nodelay` to true disables Nagle's algorithm (sets the
+ * `TCP_NODELAY` socket option), so that every write is sent immediately.
+ * This reduces latency at the possible expense of throughput.  Games and
+ * other latency-sensitive applications often want this behaviour.
+ *
+ * Setting `nodelay` to false re-enables Nagle's algorithm (clears
+ * `TCP_NODELAY`), restoring the default buffering behaviour.
+ *
+ * This may be called at any time after the socket is created, before or
+ * after the connection is established.
+ *
+ * \param sock the stream socket to configure.
+ * \param nodelay true to disable Nagle's algorithm, false to re-enable it.
+ * \returns true on success, false on error; call SDL_GetError() for details.
+ *
+ * \threadsafety You should not operate on the same socket from multiple
+ *               threads at the same time without supplying a serialization
+ *               mechanism. However, different threads may access different
+ *               sockets at the same time without problems.
+ *
+ * \since This function is available since SDL_net 3.0.0.
+ */
+extern SDL_DECLSPEC bool SDLCALL NET_SetStreamSocketNoDelay(NET_StreamSocket *sock, bool nodelay);
+
+/**
  * Dispose of a previously-created stream socket.
  *
  * This will immediately disconnect the other side of the connection, if

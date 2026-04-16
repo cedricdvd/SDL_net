@@ -171,6 +171,7 @@ static int WindowsPoll(struct pollfd *fds, unsigned int nfds, int timeout)
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <net/if.h>
 #include <netdb.h>
 #include <errno.h>
@@ -1845,6 +1846,26 @@ void NET_SimulateStreamPacketLoss(NET_StreamSocket *sock, int percent_loss)
     sock->percent_loss = SDL_clamp(percent_loss, 0, 100);
 
     UpdateStreamSocketSimulatedFailure(sock);
+}
+
+bool NET_SetStreamSocketNoDelay(NET_StreamSocket *sock, bool nodelay)
+{
+    if (!sock) {
+        return SDL_InvalidParamError("sock");
+    }
+
+#ifdef SDL_PLATFORM_WINDOWS
+    const BOOL val = nodelay ? TRUE : FALSE;
+    if (setsockopt(sock->handle, IPPROTO_TCP, TCP_NODELAY, (const char *) &val, sizeof (val)) == SOCKET_ERROR) {
+        return SetSocketErrorBool("Failed to set TCP_NODELAY", LastSocketError());
+    }
+#else
+    const int val = nodelay ? 1 : 0;
+    if (setsockopt(sock->handle, IPPROTO_TCP, TCP_NODELAY, &val, sizeof (val)) < 0) {
+        return SetSocketErrorBool("Failed to set TCP_NODELAY", LastSocketError());
+    }
+#endif
+    return true;
 }
 
 // !!! FIXME: docs should note that this will THROW AWAY pending writes in _our_ buffers (not the kernel-level buffers) if you didn't wait for them to finish.
