@@ -12,6 +12,7 @@ _NET_FreeLocalAddresses
 _NET_GetAddressStatus
 _NET_GetAddressString
 _NET_GetConnectionStatus
+_NET_GetDatagramSocketPort
 _NET_GetLocalAddresses
 _NET_GetStreamSocketAddress
 _NET_GetStreamSocketPendingWrites

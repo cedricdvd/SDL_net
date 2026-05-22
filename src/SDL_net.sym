@@ -13,6 +13,7 @@ SDL3_net_0.0.0 {
     NET_GetAddressStatus;
     NET_GetAddressString;
     NET_GetConnectionStatus;
+    NET_GetDatagramSocketPort;
     NET_GetLocalAddresses;
     NET_GetStreamSocketAddress;
     NET_GetStreamSocketPendingWrites;

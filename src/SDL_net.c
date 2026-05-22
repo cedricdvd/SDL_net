@@ -1370,6 +1370,32 @@ static struct addrinfo *MakeAddrInfoWithPort(const NET_Address *addr, const int 
     return addrwithport;
 }
 
+static bool SetSockAddrPort(struct sockaddr *saddr, Uint16 port)
+{
+    if (saddr->sa_family == AF_INET) {
+        ((struct sockaddr_in *) saddr)->sin_port = htons(port);
+        return true;
+    } else if (saddr->sa_family == AF_INET6) {
+        ((struct sockaddr_in6 *) saddr)->sin6_port = htons(port);
+        return true;
+    }
+
+    SDL_SetError("Unsupported network family");
+    return false;
+}
+
+static Uint16 GetSockAddrPort(const struct sockaddr *saddr)
+{
+    if (saddr->sa_family == AF_INET) {
+        return ntohs(((const struct sockaddr_in *) saddr)->sin_port);
+    } else if (saddr->sa_family == AF_INET6) {
+        return ntohs(((const struct sockaddr_in6 *) saddr)->sin6_port);
+    }
+
+    SDL_SetError("Unsupported network family");
+    return 0;
+}
+
 
 struct NET_StreamSocket
 {
@@ -1993,12 +2019,30 @@ NET_DatagramSocket *NET_CreateDatagramSocket(NET_Address *addr, Uint16 port)
         setsockopt(handle, SOL_SOCKET, SO_REUSEADDR, (const char *) &one, sizeof (one));
         setsockopt(handle, SOL_SOCKET, SO_BROADCAST, (const char *) &one, sizeof (one));
 
+        if ((port == 0) && (sock->port != 0) && !SetSockAddrPort(ainfo->ai_addr, sock->port)) {
+            goto failed;
+        }
+
         const int rc = bind(handle, ainfo->ai_addr, (SockLen) ainfo->ai_addrlen);
         if (rc == SOCKET_ERROR) {
             const int err = LastSocketError();
             SDL_assert(!WouldBlock(err));  // binding shouldn't be a blocking operation.
             SetSocketError("Failed to bind socket", err);
             goto failed;
+        }
+
+        if ((port == 0) && (sock->port == 0)) {
+            AddressStorage storage;
+            SockLen storage_len = sizeof (storage);
+            if (getsockname(handle, (struct sockaddr *) &storage, &storage_len) == SOCKET_ERROR) {
+                SetSocketError("Failed to determine bound socket port", LastSocketError());
+                goto failed;
+            }
+
+            sock->port = GetSockAddrPort((const struct sockaddr *) &storage);
+            if (sock->port == 0) {
+                goto failed;
+            }
         }
     }
 
@@ -2015,6 +2059,16 @@ failed:
     SDL_free(allocated_handles);
     SDL_free(sock);
     return NULL;
+}
+
+Uint16 NET_GetDatagramSocketPort(NET_DatagramSocket *sock)
+{
+    if (!sock) {
+        SDL_InvalidParamError("sock");
+        return 0;
+    }
+
+    return sock->port;
 }
 
 static NET_Status SendOneDatagram(NET_DatagramSocket *sock, NET_Address *addr, Uint16 port, const void *buf, int buflen)

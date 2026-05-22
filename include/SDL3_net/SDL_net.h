@@ -1258,8 +1258,33 @@ typedef struct NET_Datagram
  *
  * \sa NET_GetLocalAddresses
  * \sa NET_DestroyDatagramSocket
+ * \sa NET_GetDatagramSocketPort
  */
 extern SDL_DECLSPEC NET_DatagramSocket * SDLCALL NET_CreateDatagramSocket(NET_Address *addr, Uint16 port);
+
+/**
+ * Get the local port of a datagram socket.
+ *
+ * If the socket was created with a non-zero port, this returns that port. If
+ * the socket was created with port 0, this returns the port assigned by the
+ * system after the socket was bound.
+ *
+ * Unlike BSD sockets or WinSock, the returned port is a normal integer; you do
+ * not have to byteswap it from "network order."
+ *
+ * \param sock the datagram socket to query.
+ * \returns the local port, or 0 on error; call SDL_GetError() for details.
+ *
+ * \threadsafety You should not operate on the same socket from multiple
+ *               threads at the same time without supplying a serialization
+ *               mechanism. However, different threads may access different
+ *               sockets at the same time without problems.
+ *
+ * \since This function is available since SDL_net 3.0.0.
+ *
+ * \sa NET_CreateDatagramSocket
+ */
+extern SDL_DECLSPEC Uint16 SDLCALL NET_GetDatagramSocketPort(NET_DatagramSocket *sock);
 
 /**
  * Send a new packet over a datagram socket to a remote system.
@@ -1505,4 +1530,3 @@ extern SDL_DECLSPEC int SDLCALL NET_WaitUntilInputAvailable(void **vsockets, int
 #include <SDL3/SDL_close_code.h>
 
 #endif /* SDL_NET_H_ */
-
